@@ -1,0 +1,12 @@
+-- Comply360 local seed data.
+--
+-- Runs after migrations on `npm run db:reset` (see supabase/config.toml [db.seed]).
+--
+-- Rules:
+--   * Synthetic data only. Never add real Euler, customer, dealer or employee data
+--     (CLAUDE.md §15, PRD §34).
+--   * Configuration is data (Architecture §60). In V1, configuration such as the requirement
+--     catalogue, templates and lifecycle transitions is delivered through migrations and seed
+--     files, added in the phase that introduces the corresponding tables.
+--
+-- Phase 1 has no business tables, so there is nothing to seed yet.
