@@ -1055,12 +1055,18 @@ Secrets must be stored through environment variables or secure secret-management
 **Examples:**
 
 ```bash
+# Browser-safe (inlined into the client bundle at build time)
+NEXT_PUBLIC_SUPABASE_URL
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+
+# Server-only, added only when a feature needs them
+SUPABASE_SECRET_KEY
 DATABASE_URL
-SUPABASE_URL
-SUPABASE_ANON_KEY
-SUPABASE_SERVICE_ROLE_KEY
-AUTH_SECRET
 ```
+
+Next.js exposes a variable to the browser only when it is prefixed with `NEXT_PUBLIC_`. Only browser-safe values may use that prefix. Secrets such as `SUPABASE_SECRET_KEY` (the replacement for the legacy service-role key) must never use it.
+
+No separate `AUTH_SECRET` is required: sessions are managed by Supabase Auth (ADR-004).
 
 Actual values must never be committed to Git.
 

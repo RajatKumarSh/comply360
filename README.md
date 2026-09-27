@@ -36,3 +36,11 @@ Early development / architecture phase.
 - Dashboards
 - Reports
 - Administration & Configuration
+
+## Documentation
+
+- Product requirements: [docs/PRD.md](docs/PRD.md)
+- Domain model: [docs/DOMAIN-MODEL.md](docs/DOMAIN-MODEL.md)
+- Architecture: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+- Architecture decisions: [docs/adr/](docs/adr/README.md)
+- Local development: [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)
