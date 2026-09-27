@@ -125,38 +125,47 @@ Do not implement business-specific conditions directly inside UI components when
 
 # 5. Pre-COB
 
-A non-operational workshop follows the Pre-COB readiness process.
+A new (non-operational) workshop follows the Pre-COB readiness process:
 
-Current milestones:
+Workshop → Pre-COB → Go Live / COB → Post-COB
+
+Existing operational workshops are onboarded on the Legacy entry path directly into Post-COB. Never fabricate Pre-COB history for them.
+
+Current milestones (configurable and versioned):
 
 M0 - Site Finalization
 
-M1 - Infrastructure & Branding
+M1 - Infrastructure / CI (CI = Corporate Identity / branding)
 
-M2 - Tools & Safety
+M2 - Tools & Safety Equipment
 
-M3 - Manpower
+M3 - Manpower / Training
 
-M4 - Training
-
-M5 - Ready for Go Live
+There is no M4 or M5. "Ready for Go Live" is a gate, not a milestone.
 
 The system should calculate:
 
 - Milestone progress
 - Overall readiness
+- Critical blockers
 - Days elapsed since LOI
-- Days remaining
+- Days remaining to the Expected Go Live Date
 - Delay
-- At-risk status
+- At-risk status (thresholds are configurable and not yet defined)
 
-The target lifecycle is generally tracked against the LOI-to-Go-Live timeline.
+The Expected Go Live Date is the operational target date. It defaults to LOI + 90 days where applicable, and is stored independently and editable with a recorded reason.
+
+V1 readiness = completed applicable mandatory requirements ÷ total applicable mandatory requirements × 100. Keep the method configurable.
+
+Critical requirements act as blockers. Do not treat them as additional points.
 
 ---
 
 # 6. Go Live
 
-ASM/RM approval is currently part of the business process.
+Go Live approval is permission-based within the approver's scope.
+
+Do not hard-code which roles can approve Go Live. Approver roles will be assigned when the permission matrix is finalized.
 
 Approval must record:
 
@@ -245,6 +254,8 @@ Workshop Manager -> DMS / Workshop Operations
 Service Advisor -> DMS / Customer Handling
 
 Actual training requirements will be defined later.
+
+During Pre-COB, training readiness is tracked under M3 - Manpower / Training.
 
 ---
 
@@ -428,4 +439,24 @@ Completion should consider:
 - Historical integrity
 - Testing
 - Documentation
+
+---
+
+# 21. Architecture Decisions
+
+Accepted Architecture Decision Records in `docs/adr/` are binding. Read the relevant ADRs before implementing a feature. If an implementation must deviate, propose a new ADR rather than silently diverging.
+
+Key rules:
+
+- SQL migrations (Supabase CLI) are the source of truth for the schema. Use generated TypeScript types. No ORM.
+- Check permissions, never role names. Enforce scope server-side and with RLS.
+- Roles are separate: Super Admin, Admin, Service / Operations, SQM, ASM, RSM, Auditor, Dealer / Workshop User, Leadership / Read Only. Do not invent detailed permissions until the permission matrix is finalized.
+- Requirements come from the Requirement Catalogue, not from hard-coded form fields.
+- Published audit template versions and finalized audits are immutable. Corrections create a superseding audit.
+- Domain history is append-only. No hard deletes.
+- Compliance state is per workshop × requirement and changes only through compliance updates.
+- Evidence links use typed foreign keys.
+- WAR Score is an existing business concept. Do not define or alter its methodology until it is finalized in the Post-COB pilot phase.
+- Configuration is data, delivered through migrations and seed files. Do not build the full configuration/admin engine unless a phase requires it.
+- The Post-COB pilot is the immediate priority.
 

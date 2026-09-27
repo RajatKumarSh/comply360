@@ -1,9 +1,11 @@
 # Comply360 — Product Requirements Document
 
-**Document Version:** 0.1  
+**Document Version:** 0.2  
 **Status:** Draft / Foundation  
 **Product:** Comply360  
 **Last Updated:** September 2026
+
+Accepted architecture decisions are recorded in [`docs/adr/`](adr/README.md).
 
 ---
 
@@ -157,35 +159,43 @@ Current Google Form / Sheet Process
 
 # 5. Workshop Lifecycle
 
-     LOI Issued
-    ↓
-Site Finalized
-    ↓
-Infrastructure
-    ↓
-Branding
-    ↓
-Tools & Safety
-    ↓
-Manpower
-    ↓
-Training
-    ↓
-Ready for Go Live
-    ↓
-Operational
-    ↓
-Periodic Compliance
-    ↓
-Suspended / COB Called Off
-    ↓
-Operational Again
-    ↓
-Closed
+The workshop lifecycle is:
+
+Workshop → Pre-COB → Go Live / COB → Post-COB
+
+The lifecycle is a small set of coarse states:
+
+```text
+PRE_COB ──► OPERATIONAL (Post-COB) ──► SUSPENDED ──► OPERATIONAL ──► ... ──► CLOSED
+   │                                                                         ▲
+   └──────────────── (withdrawn / cancelled before Go Live) ─────────────────┘
+```
+
+- PRE_COB: the workshop is progressing through readiness milestones (§9).
+- OPERATIONAL: the workshop is live and subject to Post-COB audits and periodic compliance.
+- SUSPENDED: COB has been withdrawn / called off.
+- CLOSED: the workshop is closed.
+
+Readiness steps (site, infrastructure / CI, tools & safety, manpower / training) are tracked as Pre-COB milestone progress, not as separate lifecycle states.
+
+## 5.1 Entry Paths
+
+A workshop enters Comply360 through one of two entry paths:
+
+| Entry Path | Applies To | Starting State |
+|---|---|---|
+| New | New workshops onboarded through Comply360 | PRE_COB |
+| Legacy | Existing operational workshops | OPERATIONAL (Post-COB) |
+
+New workshops follow Pre-COB → Go Live / COB → Post-COB.
+
+Legacy workshops enter directly into Post-COB compliance and audit. Their Pre-COB history is recorded as unavailable rather than fabricated (§37).
 
 The exact lifecycle transitions should be configurable and governed by permissions.
 
 Every lifecycle transition must be recorded historically.
+
+See ADR-001.
 
 # 6. Workshop Master
 
@@ -193,7 +203,9 @@ Each workshop should have a unique Workshop ID.
 
 Initial Workshop Master fields include:
 
-Workshop ID
+Workshop ID (internal)
+Workshop Code (human-readable, e.g. W-000123)
+Entry Path (New / Legacy)
 Workshop Name
 Dealer Name
 Dealer Code
@@ -203,19 +215,23 @@ State
 City
 Address
 Google Map Pin / Location
-ASM
-RM
+ASM / RSM (via role assignments, §32.1)
 LOI Date
 Expected Go Live Date
 Actual Go Live Date
-Operational Status
-Current Lifecycle Stage
+Current Lifecycle State
 Created Date
 Created By
 Updated Date
 Updated By
 
 Additional fields may be added as requirements evolve.
+
+Expected Go Live Date is stored independently. For new workshops it defaults to LOI Date + 90 days (a configurable organization setting) and may be edited according to business rules and permissions. Every change records the previous value, new value, reason and user.
+
+LOI Date and Pre-COB dates may be empty only for Legacy workshops.
+
+Current Lifecycle State is the workshop's single current lifecycle state (§5). It is the result of the latest recorded lifecycle transition, not a separately edited field.
 
 # 7. Workshop Types
 
@@ -234,73 +250,85 @@ The system should not assume that these are the only possible workshop types.
 
 Pre-COB is the workshop readiness process before operational Go Live.
 
-When a workshop is selected for Pre-COB, the auditor/user should record its operational status.
+Pre-COB applies to workshops on the New entry path (§5.1).
 
-If the workshop is already operational, the system should not force the user through an inappropriate construction/readiness workflow.
+Existing operational workshops are onboarded on the Legacy entry path and enter directly into Post-COB. They are not forced through a construction/readiness workflow.
 
-If the workshop is not operational, the milestone workflow should be initiated.
+For a new workshop, the milestone workflow is initiated when the workshop enters Pre-COB.
 
 # 9. Pre-COB Milestones
 
+Pre-COB milestones are configurable and versioned. A workshop keeps the milestone plan version that applied when it entered Pre-COB.
+
+Each milestone supports requirements, validation, evidence, status, ownership and readiness tracking. Milestone requirements come from the Requirement Catalogue (§13a).
+
+The requirement examples below are illustrative. The complete Pre-COB requirement list will be defined separately (§43).
+
 Initial milestone structure:
 
-M0 — Site Finalization
+## M0 — Site Finalization
 
 Possible requirements:
 
-Site finalized.
-Site information captured.
-Current-state site photographs.
-Required documents.
-Approval/evidence.
-M1 — Infrastructure & Branding
+- Site finalized.
+- Site information captured.
+- Current-state site photographs.
+- Required documents.
+- Approval/evidence.
+
+## M1 — Infrastructure / CI
+
+CI means Corporate Identity / branding requirements.
 
 Possible requirements:
 
-Workshop layout.
-Bays.
-Infrastructure.
-Electrical setup.
-Customer area.
-Parts area.
-Branding.
-CI compliance.
-Required photographs.
-Evidence.
-M2 — Tools & Safety
+- Workshop layout.
+- Bays.
+- Infrastructure.
+- Electrical setup.
+- Customer area.
+- Parts area.
+- Branding.
+- CI compliance.
+- Required photographs.
+- Evidence.
+
+## M2 — Tools & Safety Equipment
 
 Possible requirements:
 
-Tools available.
-Safety equipment.
-Two Post Lift.
-Compressor.
-PCAN.
-Charger where applicable.
-NPI kit where applicable.
-Fire extinguishers.
-Other required equipment.
+- Tools available.
+- Safety equipment.
+- Two Post Lift.
+- Compressor.
+- PCAN.
+- Charger where applicable.
+- NPI kit where applicable.
+- Fire extinguishers.
+- Other required equipment.
 
 Evidence may include:
 
-Photographs.
-Purchase proof.
-Delivery proof.
-Installation proof.
-Documents.
-M3 — Manpower
+- Photographs.
+- Purchase proof.
+- Delivery proof.
+- Installation proof.
+- Documents.
 
-Possible requirements:
+## M3 — Manpower / Training
 
-Required manpower defined.
-Technicians available.
-Workshop Manager availability.
-Service Advisor availability.
-Other required roles.
-Training readiness.
+Possible manpower requirements:
+
+- Required manpower defined.
+- Technicians available.
+- Workshop Manager availability.
+- Service Advisor availability.
+- Other required roles.
+- Training readiness.
 
 Example logic:
 
+```text
 Technician Available?
     ├── No → Record requirement / nomination / action
     └── Yes
@@ -308,30 +336,21 @@ Technician Available?
        Trained?
           ├── Yes → Continue
           └── No → Training workflow
-M4 — Training
+```
 
-Track:
+Training to track:
 
-Required training.
-Training status.
-Training batch.
-Training date.
-Trainer.
-Certificate.
-Expiry where applicable.
-M5 — Ready for Go Live
+- Required training.
+- Training status.
+- Training batch.
+- Training date.
+- Trainer.
+- Certificate.
+- Expiry where applicable.
 
-Final readiness should be calculated from configured requirements.
+"Ready for Go Live" is a gate, not a milestone. See §11.
 
-The workshop should have:
-
-Overall readiness.
-Milestone progress.
-Pending requirements.
-Critical blockers.
-Evidence status.
-Target Go Live date.
-Delay/at-risk status.
+See ADR-002.
 
 # 10. Pre-COB Progress & Timeline
 
@@ -339,40 +358,100 @@ Pre-COB should provide a visual progress bar/timeline.
 
 The system should track:
 
-LOI Date.
-Target Go Live Date.
-Current Date.
-Elapsed Days.
-Remaining Days.
-Delay Days.
-At-Risk status.
-Milestone completion.
-Overall readiness percentage.
+- LOI Date.
+- Expected Go Live Date.
+- Current Date.
+- Elapsed Days since LOI.
+- Remaining Days to Expected Go Live Date.
+- Delay Days after Expected Go Live Date.
+- At-Risk status.
+- Milestone completion.
+- Overall readiness percentage.
 
-The system should support an LOI-to-90-day view.
+## 10.1 Target Date
 
-The exact threshold rules should be configurable.
+The Expected Go Live Date is the operational target date.
+
+LOI Date + 90 days may be used as the default expected calculation where applicable. The default number of days is a configurable setting.
+
+The Expected Go Live Date is stored independently and may be edited according to business rules and permissions. Every change records the previous value, new value, reason and user (§6).
+
+## 10.2 Readiness Calculation
+
+Readiness is calculated from requirement data. It is not entered manually.
+
+For V1:
+
+```text
+readiness % = completed applicable mandatory requirements
+              ÷ total applicable mandatory requirements
+              × 100
+```
+
+If there are no applicable mandatory requirements, readiness is shown as N/A rather than 100%.
+
+Readiness is calculated per milestone and overall.
+
+The calculation method is configurable so that weighted scoring can be introduced in future without changing previously calculated results.
+
+## 10.3 Critical Blockers
+
+An applicable Critical requirement that is not completed is a critical blocker.
+
+Critical blockers are reported separately from the readiness percentage. They are not treated as additional points.
+
+Critical blockers are surfaced at the Go Live gate (§11).
+
+## 10.4 At-Risk Status
+
+At-risk thresholds are configurable.
+
+Threshold values have not yet been defined and remain an open configuration decision (§43).
+
+See ADR-002.
 
 # 11. Go Live Approval
 
-ASM and/or RM can approve Go Live according to configured business rules.
+"Ready for Go Live" is a gate that follows the Pre-COB milestones. It is not a milestone.
+
+At the Go Live gate, the workshop should show:
+
+- Overall readiness.
+- Milestone progress.
+- Pending requirements.
+- Critical blockers.
+- Evidence status.
+- Expected Go Live Date.
+- Delay/at-risk status.
+
+Go Live approval is permission-based within the approver's authorized scope.
+
+Which roles may approve Go Live is configurable. It must not be permanently hard-coded, and will be assigned when the permission matrix is finalized (§32, §43).
+
+By default, Go Live approval is blocked while critical blockers remain open. Whether an authorized approver may override an open critical blocker is an open decision (§43).
+
+An approved Go Live decision moves the workshop from Pre-COB to Operational (Post-COB).
 
 A Go Live approval should record:
 
-Workshop.
-Decision.
-User.
-User Role.
-Date/time.
-Comments.
-Evidence where required.
-Approval history.
+- Workshop.
+- Decision.
+- User.
+- User Role at the time of the decision.
+- Date/time.
+- Comments.
+- Evidence where required.
+- Approval history.
 
 Approval should not overwrite previous decisions.
 
+See ADR-002 and ADR-005.
+
 # 12. Post-COB Audit
 
-Post-COB applies to operational workshops.
+Post-COB applies to operational workshops, including workshops onboarded on the Legacy entry path (§5.1).
+
+Post-COB is the first pilot scope (§40a).
 
 The audit should evaluate areas such as:
 
@@ -413,6 +492,35 @@ Photo requirements.
 Document requirements.
 Applicability.
 Conditional logic.
+
+Audit questions may reference a requirement from the Requirement Catalogue (§13a). Criticality, evidence rules and applicability default from the linked requirement and may be overridden on the question.
+
+Audit templates are versioned. A published template version is frozen, and each audit keeps the template version it started with. See ADR-006.
+
+# 13a. Requirement Catalogue
+
+Requirements are maintained in a configurable Requirement Catalogue rather than embedded directly inside audit forms or milestones.
+
+The same requirement (for example, Two Post Lift) may be used in a Pre-COB milestone, a Post-COB audit question, current compliance state and the asset register.
+
+At minimum, each requirement relates to:
+
+- Category.
+- Milestone (where applicable).
+- Criticality.
+- Evidence requirement.
+- Applicable workshop type / scope (for example state or product).
+- Active / Inactive status.
+
+Requirements are never deleted. A requirement that no longer applies is made inactive.
+
+A change to the meaning of a requirement is recorded as a new revision. Historical records keep the revision that applied at the time.
+
+The catalogue must support future changes to tools, equipment, CI, manpower, training and audit requirements without application-code changes.
+
+In V1 the catalogue is maintained through controlled configuration data. A catalogue administration screen will be built only when a later phase requires it.
+
+See ADR-003.
 
 # 14. Conditional Questions
 
@@ -477,6 +585,8 @@ State.
 Workshop type.
 Other configured criteria.
 
+Applicability is defined on the requirement in the Requirement Catalogue (§13a) and may be overridden on an individual audit question.
+
 # 16. Scoring Engine
 
 Audit scoring should be configurable.
@@ -493,6 +603,14 @@ Category thresholds.
 Critical finding rules.
 
 The system should support future changes to scoring methodology without requiring major application rewrites.
+
+Scores are calculated server-side when an audit is finalized and stored with the audit. Later scoring configuration changes do not recalculate historical audits.
+
+## 16.1 WAR Score
+
+WAR Score is an existing Comply360 business concept.
+
+Its formal definition, scoring method, criticality treatment and audit-result impact will be finalized during the Post-COB pilot phase. The scoring engine must be able to accommodate it.
 
 # 17. Criticality
 
@@ -545,6 +663,21 @@ Updated By.
 Date/time.
 Comments.
 Related asset where applicable.
+
+Current compliance state is tracked per workshop per requirement (§13a).
+
+Current compliance state changes only through timestamped compliance updates. Compliance updates may come from:
+
+- A finalized audit (baseline).
+- A manual update with reason and evidence.
+- An asset status change for an asset-linked requirement.
+- A legacy baseline for an existing workshop.
+
+When an asset linked to a requirement changes status, the compliance update is created automatically so the same fact is not entered twice.
+
+The system must be able to show what was true during an audit, what is true now, and what was true on a given date.
+
+See ADR-008.
 
 # 19. Reverse Compliance Scenario
 
@@ -896,55 +1029,97 @@ Report formats and exact layouts will be defined separately.
 
 # 32. User Roles
 
+Authorization uses role-based access control with organizational/data scope:
+
+```text
+User → Role → Scope → permitted data/actions
+```
+
+In more detail:
+
+```text
+User → Role Assignment (Role + Scope + Validity) → Role → Permissions
+```
+
 Initial roles:
 
-Super Admin.
-HO Admin.
-Regional Manager.
-Area Service Manager.
-Workshop Manager.
-Auditor.
-Leadership / Read Only.
+- Super Admin.
+- Admin.
+- Service / Operations.
+- SQM.
+- ASM.
+- RSM.
+- Auditor.
+- Dealer / Workshop User.
+- Leadership / Read Only.
 
-The final permission matrix will define:
+ASM and RSM are separate roles.
 
-View.
-Create.
-Edit.
-Approve.
-Configure.
-Export.
-Upload.
-Close.
-Reopen.
-Manage users.
-Manage master data.
+SQM is initially oriented around workshop compliance management, WAR Score / audit improvement, action tracking and monitoring within the user's assigned scope. Detailed SQM permissions will be defined in the permission matrix.
 
-Permissions should be role-based and preferably configurable.
+## 32.1 Scope
+
+A role is assigned to a user for a scope:
+
+- Organization.
+- Region.
+- State.
+- Workshop.
+
+Users may only access the workshops and data within their authorized scope. Scope must be enforced server-side and at database level.
+
+A user may hold more than one role assignment. Role assignments are ended rather than deleted, so assignment history (for example, which ASM or RSM covered a workshop) is preserved.
+
+## 32.2 Permissions
+
+Permissions are assigned to roles as configuration. Application behaviour must depend on permissions, not on role names.
+
+Initial permission actions:
+
+- View.
+- Create.
+- Edit.
+- Audit.
+- Approve.
+- Configure.
+- Administer.
+
+The final permission matrix may add further actions, such as Export, Upload, Close, Reopen, Manage users and Manage master data.
+
+The final role → permission matrix is an open question (§43). Until it is finalized, only Super Admin holds broad permissions, and approval permissions (including Go Live approval) are not assigned to any other role.
+
+See ADR-005.
 
 # 33. Master Data & Configuration
 
 Authorized administrators should eventually be able to manage:
 
-Questions.
-Audit Templates.
-Sections.
-Scoring.
-Criticality.
-Conditional Logic.
-Milestones.
-Training Types.
-Designations.
-Designation/Training Mapping.
-Asset Types.
-Workshop Types.
-Regions.
-States.
-Dashboard Thresholds.
-Lifecycle Rules.
-Roles.
-Permissions.
-Commercial Support Rules.
+- Requirement Catalogue.
+- Requirement Categories.
+- Criticality Levels.
+- Questions.
+- Audit Templates.
+- Sections.
+- Scoring.
+- Conditional Logic.
+- Milestone Plans / Milestones.
+- Training Types.
+- Designations.
+- Designation/Training Mapping.
+- Asset Types.
+- Products.
+- Workshop Types.
+- Regions.
+- States.
+- Dashboard Thresholds.
+- Lifecycle States and Transitions.
+- Roles.
+- Permissions.
+- Commercial Support Rules.
+- Organization Settings (for example default Go Live days, readiness method, time zone).
+
+Configuration is stored as data from the start. In V1, configuration is delivered through controlled database migrations and seed data. Administration screens are built only when a delivery phase requires them (§40a).
+
 # 34. Security Requirements
 
 The application must follow secure development practices.
@@ -981,18 +1156,22 @@ Business rules should not rely solely on frontend validation.
 
 # 36. Audit History Integrity
 
-Historical audits should be immutable after final submission.
+Historical audits are immutable after finalization.
 
-If a correction is required, the system should use an explicit correction/version mechanism rather than silently changing the historical record.
+If a correction is required, the system must use an explicit correction mechanism rather than silently changing the historical record.
 
-The system should clearly distinguish:
+Audit states:
 
-Draft
-Submitted
-Finalized
-Corrected / Superseded
+- Draft.
+- Submitted.
+- Finalized.
+- Superseded.
 
-The exact correction workflow will be defined later.
+A correction is made by creating a new audit that supersedes the original. The original audit is marked Superseded and remains available unchanged.
+
+Who may finalize and who may supersede an audit will be defined in the permission matrix (§43).
+
+See ADR-006.
 
 # 37. Existing Workshop Data
 
@@ -1002,14 +1181,18 @@ Some existing workshops may not have historical Pre-COB data available.
 
 The system must not fabricate historical data.
 
+Existing operational workshops are onboarded on the Legacy entry path (§5.1). They enter directly into Post-COB compliance and audit, and are the initial pilot scope (§40a).
+
 For legacy workshops, Comply360 may support:
 
-Current State Baseline.
-Legacy Migration Record.
-Current Compliance State.
-Existing Audit History where available.
+- Current State Baseline.
+- Legacy Migration Record.
+- Current Compliance State.
+- Existing Audit History where available.
 
 Missing historical information should be explicitly represented as unavailable rather than invented.
+
+The required fields for a legacy workshop are an open question (§43).
 
 # 38. Future Features
 
@@ -1036,33 +1219,40 @@ These are intentionally outside the initial scope unless prioritized later.
 
 # 39. Initial Technical Direction
 
-The initial technical architecture is expected to use:
+The initial technical architecture uses:
 
-Next.js.
-TypeScript.
-PostgreSQL.
-Supabase.
-Tailwind CSS.
-shadcn/ui.
-Zod.
-React Hook Form.
-Apache ECharts.
-GitHub.
-Vercel.
+- Next.js.
+- TypeScript.
+- PostgreSQL.
+- Supabase (database, authentication, storage).
+- Supabase CLI with SQL migrations as the database source of truth.
+- Generated TypeScript database types.
+- Tailwind CSS.
+- shadcn/ui.
+- Zod.
+- React Hook Form.
+- Apache ECharts.
+- GitHub.
+- Vercel.
 
-This is an initial direction, not a final architectural decision.
+No ORM is used at this stage.
 
-Architecture review should confirm:
+Accepted architecture decisions are recorded in `docs/adr/`:
 
-Database architecture.
-Authentication.
-Authorization.
-ORM/data access approach.
-File storage.
-Application structure.
-Deployment.
-Testing.
-Environment management.
+- Database architecture and data access: ADR-004.
+- Authorization: ADR-005.
+- Audit versioning and immutability: ADR-006.
+- History and audit trail: ADR-007.
+- File storage: ADR-009.
+- Identifiers and tenancy: ADR-010.
+
+Still to be confirmed during implementation:
+
+- Authentication method.
+- Application structure.
+- Deployment.
+- Testing.
+- Environment management.
 
 # 40. Development Strategy
 
@@ -1082,6 +1272,17 @@ Error handling.
 Audit/history handling.
 Tests.
 Documentation.
+
+# 40a. Pilot Scope
+
+The pilot starts with Post-COB.
+
+- Existing operational workshops are onboarded on the Legacy entry path and enter directly into Post-COB compliance and audit.
+- New workshops follow Pre-COB → Go Live / COB → Post-COB. Pre-COB is designed now and implemented after the Post-COB pilot.
+
+This allows the pilot to address the existing workshop estate immediately while preserving the full lifecycle architecture for new workshops.
+
+The architecture supports configurability, but implementation remains incremental. The complete configuration/administration engine is not built during the foundation phases. Pilot configuration (for example the Post-COB template and requirement catalogue) is delivered through controlled seed data.
 
 # 41. Quality Standard
 
@@ -1134,26 +1335,37 @@ Product requirements.
 
 The following requirements still need confirmation:
 
-Complete workshop roles.
-Complete designation list.
-Manpower-to-training mapping.
-Complete workshop types.
-Complete Pre-COB checklist.
-Complete Post-COB checklist.
-Final scoring methodology.
-Criticality rules.
-Critical blocker rules.
-Final user permission matrix.
-Final report formats.
-Complete lifecycle approval process.
-Commercial support eligibility rules.
-Exact CAPA workflow.
-Exact asset master.
-Exact expense categories.
-Notification requirements.
-Document retention requirements.
-Audit correction/versioning rules.
-Final dashboard KPI definitions.
+- Final role → permission matrix, including detailed SQM permissions.
+- Default scope type for each role.
+- Authentication method.
+- Complete workshop roles.
+- Complete designation list.
+- Manpower-to-training mapping.
+- Complete workshop types.
+- Complete Pre-COB checklist / requirement list per milestone.
+- Complete Post-COB checklist.
+- WAR Score formal definition, scoring method, criticality treatment and audit-result impact (to be finalized during the Post-COB pilot phase).
+- Final scoring methodology.
+- Criticality rules and their effect on audit results.
+- Finding creation rules.
+- Who may finalize and who may supersede an audit.
+- Can a Submitted audit be edited or returned to Draft, and by whom?
+- Required fields for legacy workshops.
+- Compliance status values.
+- Asset status → compliance status mapping.
+- Go Live approver rule (which roles hold Go Live approval permission).
+- Whether an authorized approver may override an open critical blocker.
+- At-risk threshold values.
+- Whether evidence must be complete before a requirement can be marked completed.
+- Lifecycle transition rules (reason/evidence requirements per transition, suspension and re-approval rules).
+- Final report formats.
+- Commercial support eligibility rules.
+- Exact CAPA workflow.
+- Exact asset master.
+- Exact expense categories.
+- Notification requirements.
+- Document retention requirements.
+- Final dashboard KPI definitions.
 
 These must be finalized before the corresponding functionality is treated as complete.
 
@@ -1180,40 +1392,26 @@ Changes are committed to Git.
 
 Current status:
 
+```text
 Project Repository       ✅
 GitHub                   ✅
 Git Configuration        ✅
 Initial Documentation    ✅
 CLAUDE.md                ✅
 README.md                ✅
-PRD                      🟡 Foundation
-Domain Model             ⏳
-Architecture Decision    ⏳
+PRD                      🟡 Draft v0.2
+Domain Model             🟡 Draft v0.2
+Architecture Document    🟡 Draft v0.2
+ADRs 001–010             ✅ Accepted
 Permission Matrix        ⏳
 Audit Engine Spec        ⏳
 Database Schema          ⏳
-Application              ⏳
+Application              ⏳ (Next.js scaffold only)
 Testing                  ⏳
-Pilot                    ⏳
+Pilot (Post-COB)         ⏳
 Production               ⏳
+```
 
 # 46. Product Goal
 
 The long-term goal is to create a reliable, configurable, scalable Workshop Lifecycle and Compliance platform that can replace fragmented manual workflows while preserving complete operational history and providing a single source of truth for workshop operations.
-
-
-### Step 4 — Save
-
-After pasting:
-
-**Press `Ctrl + S`**
-
-That's it for now.
-
-**Do not run Git commands yet. Do not ask Claude Code to modify anything yet.**
-
-Once you've pasted and saved it, tell me:
-
-> **PRD pasted and saved**
-
-Then we'll verify the file and make our **first documentation commit** properly.
