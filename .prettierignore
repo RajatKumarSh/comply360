@@ -1,0 +1,17 @@
+# Build output and dependencies
+.next/
+out/
+build/
+coverage/
+node_modules/
+package-lock.json
+
+# Generated files
+next-env.d.ts
+types/database.ts
+
+# Supabase CLI project (config.toml, SQL migrations and seed are formatted by hand)
+supabase/
+
+# Documentation is maintained by hand and must not be reflowed automatically
+*.md
