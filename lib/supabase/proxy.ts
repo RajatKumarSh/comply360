@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { isPublicPath, LOGIN_PATH } from "@/lib/auth/paths";
 import { getPublicEnv } from "@/lib/env";
+import type { Database } from "@/types/database";
 
 /**
  * Refreshes the Supabase session cookie on every matched request and redirects visitors
@@ -15,7 +16,7 @@ export async function updateSession(request: NextRequest) {
   const env = getPublicEnv();
   let response = NextResponse.next({ request });
 
-  const supabase = createServerClient(
+  const supabase = createServerClient<Database>(
     env.NEXT_PUBLIC_SUPABASE_URL,
     env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
     {
